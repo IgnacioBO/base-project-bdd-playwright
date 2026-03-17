@@ -24,7 +24,8 @@ Ademas las ventajas propias de cucumber:
 2. Instalar NodeJS
 3. Instalar idealmente los plugins de Playwright y Cucumber en VSCode
 4. Clonar el repositorio
-5. Instalar las dependeicas y luego los browser soportados desde la linea de comandos
+5. Instalar las dependencias y luego los browser soportados desde la linea de comandos
+
     ```bash
     npm install
     npx playwright install
@@ -128,18 +129,18 @@ const testDir = defineBddConfig({
 **Si el plugin de cucumber no reconoce los steps**
 1. Ir a la extension de Cucumber
 2. Ir a settings y agregar los path de steps y features en "cucumber.features" y "cucumber.glue".
-```json
-"cucumber.features": [
-        "**/*.feature",
-       ...
-],
-"cucumber.glue": [
-        "**/features/**/*.ts",
-        ....
-]
-```
+    ```json
+    "cucumber.features": [
+            "**/*.feature",
+        ...
+    ],
+    "cucumber.glue": [
+            "**/features/**/*.ts",
+            ....
+    ]
+    ```
 
-### Como generar los steps
+## Como generar los steps
 Se puede directamente con el plugin de Cucumber de VSCode sin embargo, puede generarlo en un formato no compatible con el proyecto (que es formato playwrihgt-bdd a difrencia del foramto cucumber que podria generar), para eso se recomienda usar el siguiente 
 ```
 npx bddgen
@@ -154,10 +155,10 @@ Los fixture ademas permiten inyectar de manera sencilla los page-objects a los s
 
 ### Algunos fixtures utiles
 
-`$test` permite usar funciones que manejan el test, como .skip() para saltar el test
-`$testInfo` permite generar cierta info para los test como hacer adjuntos con .attach() 
-`$step` permite obtener informacion del step como el titulo con .title
-`$tags` permite manejar y obtener los tags
+- `$test` permite usar funciones que manejan el test, como .skip() para saltar el test
+- `$testInfo` permite generar cierta info para los test como hacer adjuntos con .attach() 
+- `$step` permite obtener informacion del step como el titulo con .title
+- `$tags` permite manejar y obtener los tags
 
 Estos se usan como parametro dentro de los test, por ejemplo:
 ```ts
@@ -170,13 +171,13 @@ Given('I do something', async ({ browserName, $test, $tags }) => {
 
 
 ### Pasar datos entre steps usando fixtures (`ctx`, `world`)
-- Se puede usar dentgo de fixtures un type `ctx` del tipo que queramos
-- El mas simple es `Record<string, any>;` para usar como cqueramos por emploe usarlo `ctx.valor = "aa"`
+- Se puede usar dentro de fixtures un type `ctx` del tipo que queramos
+- El mas simple es `Record<string, any>;` para usar como queramos por ejemplo usarlo `ctx.valor = "aa"`
   ```ts
   type Ctx = Record<string, any>;
   ```
 
-- Tambien puede ser ma estrcto si se require:
+- Tambien puede ser mas estricto si se require:
   ```ts
   type Ctx = {
     newTapPromise: Promise<Page> 
