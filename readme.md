@@ -1,0 +1,339 @@
+# Playwright-BDD
+Tanto Playwright como Cucumber tienen sus propios test runners. Si se usa Cucumber como runner, Playwright se usaría solo como biblioteca para ejecutar lso escenarios BDD. 
+
+Con **playwright-bdd** es posible convertir los escenarios BDD a archivos test directo a Playwright, permitiendo usarlo como runner, lo que de ventajas sobre usar el runner de cucumber:
+- Inicializacion y limpieza automatica de los browsers
+- Captura autoamtica de screenshots, videos y traces
+- Paralelizacion usando sharding
+- Auto-wait de elementos page
+- Comparación visual incluida de los test
+- Uso de fixture que permite entre otras funciones, manejar flujos de los test (similar a los hooks) y variables entre los steps
+- Aserciones incluidas
+
+[Mas info de las ventajas](https://playwright.dev/docs/library#key-differences)
+
+Ademas las ventajas propias de cucumber:
+- Usar archivos .feature con sus steps
+- Uso de sistemas de tags con la logica de cucumber
+- Reportes cucumber
+- Reutilizacion de steps
+- Subir los reportes a rerpots.cucumber.io
+
+## Como empezar a usarlo
+1. Tener instalado un IDE (ej Visual Studio Code `VSCode`)
+2. Instalar NodeJS
+3. Instalar idealmente los plugins de Playwright y Cucumber en VSCode
+4. Clonar el repositorio
+5. Instalar las dependeicas y luego los browser soportados desde la linea de comandos
+    ```bash
+    npm install
+    npx playwright install
+    ```
+6. Revisar `.env.example` para poder crear los archivos `env.pais.ambiente.local`, como puede ser `env.cl.qa.local` con las **variables sensibles** como `USER` o `PASSWORD`[ver mas detalles](#env-example-y-env-local)
+7. Es importante siempre usar npx bddgen primero para genear los test basados en cucumber. Para ejecutar todos los casos
+    Windows
+    ```
+    npx bddgen; npx playwright test
+    ```
+    bash
+    ```bash
+    npx bddgen && npx playwright test
+    ```
+
+### Si es un proyecto nuevo de cero generalmente se instalan estas librearias separadas
+Iniciar e instalar lib del proyecto
+1. `npm init playwright@latest`
+2. `npm install -D dotenv`
+3. `npm install -D winston`
+4. `npm install -D envalid`
+
+Instalar playwright-bdd
+1. `npm i -D playwright-bdd`
+
+## Environment variables
+Las variables de entorno deben guardarse dentro de los archivos `.env.ambinente.pais` como por ejemplo `.env.qa.cl`
+Dentro de config/env.ts pueden configurarse en mas detalles para poder contorlar el tipo de dato de cada uno, si tiene valores por defecto o tiene valores especificos, etc. Para usarse dentro de los test solo se inmporta env y se usa:import 
+```ts
+{ env } from '../../../config/env'
+Given('Estoy logueado', async ({ /*...*/ }) => {
+    const user = env.TEST_USER; 
+    const pass = env.TEST_PASS;
+    const url = env.URL;
+})
+```
+### env example y env local
+Dentro de `env.example` estan unos ejemplos de las variables sensibles que se usan, al ser sensibles estas deben definirse dentro del repositorio como secrets por ambiente. Para que pueda probarse en **local** debe crearse archivos locales con esta norma `.env.ambiente.pais.local` con los secrets.
+Ejemplo de env.qa.cl.local
+```properties
+TEST_USER=mi_user
+TEST_PASS=mi_pass
+```
+## Algunos comandos utiles
+1. Ejecutar segun pais, ambiente y browser (por defecto solo viene para Chrome, habilitar los demas en `playwright.config.ts`)
+ - bash: 
+    ```
+    APP_ENV=qa COUNTRY=cl npx bddgen npx playwright test --project "chromium"
+    ```
+ - powershell: 
+    ```
+    $env:APP_ENV="qa"; $env:COUNTRY="cl"; npx bddgen ; npx playwright test --project "chromium"
+    ```
+ - cmd windows: 
+    ```
+    set "APP_ENV=qa" && set "COUNTRY=cl" && npx bddgen && npx playwright test --project "chromium"
+    ```
+2. `HEADED="false"` por defecto se ejecutan de manera headed, si quiere ejecutarse headless poner la variable de entorno en false
+3. Ejecutar test especificos
+ - `--tags "@tag"` Por tags  (el mas recomendado si se usa Cucumber), permite usar conectores logicos (and, or, not)
+    ```
+    npx bddgen --tags "@POM or @POM2"  ; npx playwright test
+    ```
+ - `-g "parte del titulo"` Por parte del nombre del escenario, usando 
+     ```
+    npx bddgen ; npx playwright test -g "Compra de productos2"
+    ```
+ - `--grep-invert "2"` Los escenarios que no tienen parte de un texto 
+    ```
+    npx bddgen ; npx playwright test --grep-invert "2"
+    ```
+4. `--repeat-each x` Donde x es un numero, permite repetir las pruebas x cantidad de veces
+    ```
+    npx bddgen ; npx playwright test --repeat-each 2
+    ```
+5. `test --ui` Ejecutar en modo UI, muy util para depurar y ejecutar cada test de manera aisalda y poder inpseccionar elementos, locators, logs internos, DOM, erroes, network, etc.
+    ```
+    npx bddgen ; npx playwright test --ui
+    ```
+6. `test --trace on` Ejecuta los test en modo trace, es decir registra toda la actividad (genera archivos pesados) similar al modo UI, pero ya con los test ejecutados. Luego de ejecutarse en modo trace, debe abrirse el reporte usando `npx playwright show-report` y buscar donde dice ***view trace***
+    ```
+    npx bddgen ; npx playwright test --trace on
+    npx playwright show-report reports\cucumber-report
+    ```
+
+
+
+
+## Algunas configuraciones
+Si se quiere cambiar la direccion de los archivos feature, steps y support (fixtures, hooks), se puede ir a playwright.config.ts y modificar las ruta en estas lineas
+```ts
+const testDir = defineBddConfig({
+  features: 'tests/features/**/*.feature',
+  steps: [
+    'tests/features/steps/**/*.ts',
+    'tests/features/support/**/*.ts',
+  ],
+});
+```
+
+**Si el plugin de cucumber no reconoce los steps**
+1. Ir a la extension de Cucumber
+2. Ir a settings y agregar los path de steps y features en "cucumber.features" y "cucumber.glue".
+```json
+"cucumber.features": [
+        "**/*.feature",
+       ...
+],
+"cucumber.glue": [
+        "**/features/**/*.ts",
+        ....
+]
+```
+
+### Como generar los steps
+Se puede directamente con el plugin de Cucumber de VSCode sin embargo, puede generarlo en un formato no compatible con el proyecto (que es formato playwrihgt-bdd a difrencia del foramto cucumber que podria generar), para eso se recomienda usar el siguiente 
+```
+npx bddgen
+```
+
+
+## Fixtures vs Hooks
+Este proyecto soporta tanto hooks como fixtures para controlar los flujos. Ambos sirve para poder ejecutar codigo antes o despues de la ejecuciones de workers, escenarios, steps, etc. Los fixstures generalmente se recomiendan porque permiten mayor control una vez dominados.
+
+Los fixture ademas permiten inyectar de manera sencilla los page-objects a los steps, asi como tambien permiten inyectar variables que pueden ser compartidas entre los steps de un test sin problemas
+
+
+### Algunos fixtures utiles
+
+`$test` permite usar funciones que manejan el test, como .skip() para saltar el test
+`$testInfo` permite generar cierta info para los test como hacer adjuntos con .attach() 
+`$step` permite obtener informacion del step como el titulo con .title
+`$tags` permite manejar y obtener los tags
+
+Estos se usan como parametro dentro de los test, por ejemplo:
+```ts
+Given('I do something', async ({ browserName, $test, $tags }) => { 
+  if (browserName === 'firefox') $test.skip();
+    console.log($tags)
+  // ...
+});
+```
+
+
+### Pasar datos entre steps usando fixtures (`ctx`, `world`)
+- Se puede usar dentgo de fixtures un type `ctx` del tipo que queramos
+- El mas simple es `Record<string, any>;` para usar como cqueramos por emploe usarlo `ctx.valor = "aa"`
+  ```ts
+  type Ctx = Record<string, any>;
+  ```
+
+- Tambien puede ser ma estrcto si se require:
+  ```ts
+  type Ctx = {
+    newTapPromise: Promise<Page> 
+  };
+  ```
+
+- Luego agregarlo a los fixture:
+  ```ts
+  export const test = base.extend<{ ctx: Ctx }>({
+    ctx: async ({}, use) => {
+      const ctx = {} as Ctx;
+      await use(ctx);
+    },
+  });
+  ```
+
+- Luego se usa:
+  ```ts
+  Given('Estoy logueado', async ({ page, loginPage, ctx}) => {
+      ctx.nuevoLoco ="Soy un valor en el contexto";
+  }
+  ```
+- Otra manera es usar `world` y que sea mas especifico, por ejemplo
+  ```ts
+  type World = {
+      productoRandomSel?: Product;
+      grupoDeProductos: Product[];
+  };
+  export const test = base.extend<Fixtures>({
+      world: async ({}, use) => {
+          const world: World = {
+              productoRandomSel: undefined, //Inicializo el producto random seleccionado como un objeto vacio
+              grupoDeProductos: [] as Product[], //Inicializo el grupo de productos como un array vacio, pero con el tipo Product[]
+          };
+          await use(world);
+      },
+  ```
+- Luego usar el `world` por ejmeplo:
+  ```ts
+  When('Agrego un producto al carrito', async ({homePage, world}) => {
+      world.productoRandomSel = await homePage.clickOneRandomProduct();
+  ```
+
+
+### Con Fixture puede hacer un setup and teardown
+La clave esta en el `await use(...)`
+```ts
+type Fixtures = {
+   //....
+    auth: LoginPage;
+   //....
+};
+export const test = base.extend<Fixtures>({
+    auth: async ({page}, use) => {
+        log.debug("Ejecutando fixture de autenticación");
+        const loginPage = new LoginPage(page);
+        const user: string = process.env.TEST_USER || "";
+        const pass: string = process.env.TEST_PASS || "";
+        const url: string = env.urls.frontend
+        await loginPage.login(url, user, pass);
+        await loginPage.verifyLoginSuccess();
+        *await use(loginPage);*
+        log.debug('Teardown de auth');
+  },
+  //....
+```
+En un fixture, al usar `await use(...)` parte el fixture en 2
+- Antes de `await use(...)` → **`setup`**
+- Después de `await use(...)` → **`teardown`**
+
+
+### Fixture para condicionales. Ejemplos
+#### Fixture para mobile
+Aqui un ejempo de que si se tiene el tag `@mobile`, sobrescribe el viewport por defecto a uno correpondiente a mobile.
+```ts
+export const test = base.extend({
+viewport: async ({ $tags, viewport }, use) => {
+    if ($tags.includes('@mobile')) {
+    viewport = { width: 375, height: 667 };
+    }
+    await use(viewport);
+}
+});
+```
+#### Fixture para auth
+Con fixture tambien se puede hacer que solo se ejecuten o que tengan logicas segun el tag. Por ejmeplo aqui si el tag `@noauth` esta presente en el escenario, limpia el storageState (que tiene guardadas las cookies y estado de algun login). En cambio si no tiene el tag, usa el storageState guardado
+```ts
+  export const test = base.extend<Fixtures>({
+  storageState: async ({ $tags, storageState }, use) => {
+    // reset storage state for features/scenarios with @noauth tag
+    if ($tags.includes('@noauth')) {
+      storageState = { cookies: [], origins: [] };
+    }
+    await use(storageState);
+  },
+});
+```
+
+## Usar logs
+Tan solo se debe import el archivo `config/logger` y usar las opcioens de logueo
+```ts
+import { log } from '../../config/logger';
+async testLog() {
+    log.debug('Log debug');
+    log.info('Log info'); 
+    log.warn('Log warn');
+    log.error('Log error');
+}
+```
+
+## Rutas por defecto
+- `/config` relacionados con configuraciones y utilidades globales, como logger y env
+- `/tests/` todo lo relacionado al testing, contiene
+    - `/features` que contiene los archivos .feature y ademas contiene
+        -`/steps` contiene la implementacion de los los step de los feature, usa los metodos de los page-objects
+        -`/support` contiene ayudante de pruebas como los hooks y fixtures [mas info](#fixtures-vs-hooks)
+    - `models` puede contener `interface` y `class` para modelar estructura de datos acordes al negocios/flujos
+    - `page-objects` contiene los locators y las acciones/metodos de las pagina/vistas
+    -`utils` contiene metodos ayudantes/helpers, entre otros
+- `/logs` logs generados
+- `/reports` reportes generados, contiene 
+    -`blob-report` reporte blob que sirve para poder unir reportes cuando se ejecutan en paralelo (en CI), al usar `merge-reports`
+    -`cucumber-report` reportes cucumber, entre ellos html, json, junit, etc.
+    -`playwright-report` reportes playwright, principalmente html
+
+
+## Como publicar en reports.cucumber.io
+1) Generar un archivo .ndjson de Cucumber Messages desde playwright-bdd. Para eso agregar  
+    ```ts
+    cucumberReporter('message', 
+    { outputFile: 'reports/cucumber-report/messages.ndjson', skipAttachments: ['text/x.cucumber.log+plain'] }) 
+    ```
+2) Ir a https://messages.cucumber.io/api/reports
+3) Buscar en las repsons headers "Location"
+4) Copiar la URL
+5) Con postman o automatico hacer un PUT con el archivo .ndjson (en postman debe ir en el body conmo binary)
+6. Luego ingesar a la url que se entrega al comienzo (https://reports.cucumber.io/reports/xxxxxx).
+
+
+## Tips extras
+- Una manera de evitar que playwright se reconozca como bot y que ciertas paginas bloqueen:
+    ```ts
+    // --- Stealth: Ocultar webdriver ---
+    await page.addInitScript(() => {
+        // Ocultar webdriver
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    });
+    ```
+- Hacer attach de logs en los step para que aparezcan en el reporte:
+    ```ts
+    await $testInfo.attach('log-evento', {
+        body: "log desde el step de login",
+        contentType: 'text/plain',
+    }) 
+    ``` 
+- Por defecto playwright adjunta todo el log a los reportes si queire sacarse puede usarse`skipAttachments: ['text/x.cucumber.log+plain']` dentro de un reporter
+    ```ts
+    cucumberReporter('html', {skipAttachments: ['text/x.cucumber.log+plain']}),
+    ``` 
+

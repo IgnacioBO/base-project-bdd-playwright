@@ -1,0 +1,152 @@
+name: Playwright Tests
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Ambiente a ejecutar'
+        required: true
+        type: choice
+        options:
+          - qa.cl
+          - qa.pe
+      tags:
+        description: 'Tags a ejecutar (opcional)'
+        required: false
+        type: string
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2]
+        shardTotal: [2]
+    environment: ${{ inputs.target_env || 'qa.cl' }} #Por defecto ejecutare el env de qa.cl al hacer push
+    env: #Aqui sacaremos test_user y test_pass de los secrets de github actions
+      TEST_USER: ${{ secrets.TEST_USER }}
+      TEST_PASS: ${{ secrets.TEST_PASS }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+    - name: Run Playwright tests
+      run: npx bddgen --tags "${{ inputs.tags }}" && HEADED=false npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+    - name: Upload blob report to GitHub Actions Artifacts
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: blob-report-${{ matrix.shardIndex }}
+        path: reports/blob-report
+        retention-days: 1
+
+  merge-reports:
+    # Merge reports after playwright-tests, even if some shards have failed
+    if: ${{ !cancelled() }}
+    # needs significa que esta tarea se ejecutará después de la tarea "test". Si "test" falla, esta tarea aún se ejecutará debido a la condición if.
+    needs: [test]
+
+    environment: ${{ inputs.target_env || 'qa.cl' }} #Por defecto ejecutare el env de qa.cl al hacer push
+    env: #Aqui sacaremos test_user y test_pass de los secrets de github actions
+      TEST_USER: ${{ secrets.TEST_USER }}
+      TEST_PASS: ${{ secrets.TEST_PASS }}
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Install dependencies
+      run: npm ci
+    #Hay que generar los BDD specs antes de mergear los reportes
+    - name: Generate BDD specs
+      run: npx bddgen --tags "${{ inputs.tags }}"
+
+    - name: Download blob reports from GitHub Actions Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: all-blob-reports
+        pattern: blob-report-*
+        merge-multiple: true
+
+    - name: Merge into HTML Report
+      run: npx playwright merge-reports --config playwright.config.ts ./all-blob-reports
+
+    - name: Upload HTML report
+      uses: actions/upload-artifact@v4
+      with:
+        name: html-report--attempt-${{ github.run_attempt }}
+        path: reports/cucumber-report
+        retention-days: 14
+    
+    - name: Verificar NDJSON
+      run: test -f reports/cucumber-report/messages.ndjson
+
+    - name: Upload merged cucumber ndjson
+      uses: actions/upload-artifact@v4
+      with:
+          name: merged-cucumber-report
+          path: reports/cucumber-report/messages.ndjson
+          retention-days: 1
+  
+  publish-cucumber-report:
+    if: ${{ !cancelled() }}
+    needs: [merge-reports]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download merged cucumber ndjson
+        uses: actions/download-artifact@v5
+        with:
+          name: merged-cucumber-report
+          path: reports/cucumber-report
+
+      - name: Publish to Cucumber Reports
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FILE="reports/cucumber-report/messages.ndjson"
+
+          echo "Revisando archivo..."
+          ls -l "$FILE"
+
+          echo "Creando reporte..."
+          curl -sS -D headers.txt -o response.txt \
+            https://messages.cucumber.io/api/reports
+
+          echo "----- headers.txt -----"
+          cat headers.txt
+          echo "----- response.txt -----"
+          cat response.txt
+
+          UPLOAD_URL="$(awk 'BEGIN{IGNORECASE=1} /^location: /{gsub(/\r/,"",$2); print $2}' headers.txt | tail -1)"
+          REPORT_URL="$(grep -Eo 'https://reports\.cucumber\.io/reports/[^[:space:]|]+' response.txt | head -1)"
+
+          echo "UPLOAD_URL=$UPLOAD_URL"
+          echo "REPORT_URL=$REPORT_URL"
+
+          test -n "$UPLOAD_URL"
+          test -n "$REPORT_URL"
+
+          echo "Subiendo NDJSON..."
+          curl -sS -X PUT --upload-file "$FILE" "$UPLOAD_URL"
+
+          echo "report_url=$REPORT_URL" >> "$GITHUB_OUTPUT"
+          echo "### Cucumber Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "$REPORT_URL" >> "$GITHUB_STEP_SUMMARY"
+      
+      - name: Mostrar link
+        run: echo "Reporte => ${{ steps.publish.outputs.report_url }}"
