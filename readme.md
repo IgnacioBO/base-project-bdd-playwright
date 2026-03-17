@@ -239,6 +239,36 @@ Given('I do something', async ({ browserName, $test, $tags }) => {
 
 ### Con Fixture puede hacer un setup and teardown
 La clave esta en el `await use(...)`
+En un fixture, al usar `await use(...)` parte el fixture en 2
+- Antes de `await use(...)` → **`setup`** Se ejecuta todo ese codigo al principio del test o cuando es llamado ese fixture
+- Después de `await use(...)` → **`teardown`** Se ejecuta ese codigo al finalzar el test
+
+Aca por ejemplo tenemos un fixsture que se ejecute siempre antes de cualquier escenario, ya que esta puesto como `scope:'test'` y `auto: true`. Pueden agregarse if con tags, por ejemplo para hacer acciones especificas a ciertos tests.
+```ts
+type Fixtures = {
+    forEachTest: void;
+};
+
+export const test = base.extend<Fixtures, WorkerFixtures>({
+    forEachTest: [
+        async ({ page, $testInfo, $tags }, use) => {
+            log.info(`Iniciando el escenario: ${$testInfo.title}`);
+            if ($tags.includes('@mitag')) {
+                log.info(`Accion especial para los escenarios con tag @mitag`);
+            }
+            await use();
+            log.info(`Se finalizó el escenario: ${$testInfo.title}`);
+        },
+        { scope:'test', auto: true }, //Se ejecuta antes de cada test ya que tiene scope test y auto en true
+    ], 
+    //(...)
+})
+```
+
+
+### Fixture puede hacer un setup and teardown especiales
+Ademas podemos crear fixtures que no sean autoamticos, si no que deban ser llamados dentro de un test/step par que deban aplicarse, tambien usan la logica del `await use();`, es decir todo lo que esta arriba de éste se ejecutara antes del step/test que es llamado y todo lo abajo de éste se ejecutara al finalizar el test.
+Primero se crea el fixture `auth`
 ```ts
 type Fixtures = {
    //....
@@ -254,15 +284,18 @@ export const test = base.extend<Fixtures>({
         const url: string = env.urls.frontend
         await loginPage.login(url, user, pass);
         await loginPage.verifyLoginSuccess();
-        *await use(loginPage);*
+        await use(loginPage);
         log.debug('Teardown de auth');
   },
   //....
 ```
-En un fixture, al usar `await use(...)` parte el fixture en 2
-- Antes de `await use(...)` → **`setup`**
-- Después de `await use(...)` → **`teardown`**
-
+Despues tan solo debo llamar a `auth` dentro de un test / step y se ejecutará todo lo que esta sobre await use(...) de manera automatica y al finalizar el test/esceenario, ejecutara lo que hay posterior
+```ts
+Given('Estoy logueado', async ({auth}) => {
+    //Al haber usado {auth} se ejecuto ese fixture antes de comenzar este test/step
+    log.info('Login completo');
+});
+```
 
 ### Fixture para condicionales. Ejemplos
 #### Fixture para mobile
