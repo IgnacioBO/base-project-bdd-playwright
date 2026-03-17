@@ -118,7 +118,7 @@ TEST_PASS=mi_pass
     ```
     npx bddgen ; npx playwright test --ui
     ```
-    
+
 6. `test --trace on` Ejecuta los test en modo trace, es decir registra toda la actividad (genera archivos pesados) similar al modo UI, pero ya con los test ejecutados. Luego de ejecutarse en modo trace, debe abrirse el reporte usando `npx playwright show-report` y buscar donde dice ***view trace***
     
     ```
@@ -171,7 +171,7 @@ Los fixture ademas permiten inyectar de manera sencilla los page-objects a los s
 ### Algunos fixtures utiles
 
 - `$test` permite usar funciones que manejan el test, como .skip() para saltar el test
-- `$testInfo` permite generar cierta info para los test como hacer adjuntos con .attach() 
+- `$testInfo` permite generar cierta info para los test como hacer adjuntos con .attach(), tambine pemite obtener el nombre del escenario 
 - `$step` permite obtener informacion del step como el titulo con .title
 - `$tags` permite manejar y obtener los tags
 
