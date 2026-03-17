@@ -42,7 +42,7 @@ Ademas las ventajas propias de cucumber:
     npx bddgen && npx playwright test
     ```
 
-### Si es un proyecto nuevo de cero generalmente se instalan estas librearias separadas
+### Si es un proyecto nuevo de cero generalmente se instalan estas librerías separadas
 Iniciar e instalar lib del proyecto
 1. `npm init playwright@latest`
 2. `npm install -D dotenv`
