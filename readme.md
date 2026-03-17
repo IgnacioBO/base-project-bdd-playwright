@@ -94,26 +94,31 @@ TEST_PASS=mi_pass
     ```
     npx bddgen --tags "@POM or @POM2"  ; npx playwright test
     ```
+
  - `-g "parte del titulo"` Por parte del nombre del escenario, usando 
     
      ```
     npx bddgen ; npx playwright test -g "Compra de productos2"
     ```
+
  - `--grep-invert "2"` Los escenarios que no tienen parte de un texto 
     
     ```
     npx bddgen ; npx playwright test --grep-invert "2"
     ```
+
 4. `--repeat-each x` Donde x es un numero, permite repetir las pruebas x cantidad de veces
     
     ```
     npx bddgen ; npx playwright test --repeat-each 2
     ```
+
 5. `test --ui` Ejecutar en modo UI, muy util para depurar y ejecutar cada test de manera aisalda y poder inpseccionar elementos, locators, logs internos, DOM, erroes, network, etc.
     
     ```
     npx bddgen ; npx playwright test --ui
     ```
+    
 6. `test --trace on` Ejecuta los test en modo trace, es decir registra toda la actividad (genera archivos pesados) similar al modo UI, pero ya con los test ejecutados. Luego de ejecutarse en modo trace, debe abrirse el reporte usando `npx playwright show-report` y buscar donde dice ***view trace***
     
     ```
