@@ -118,7 +118,7 @@ TEST_PASS=mi_pass
     ```
     npx bddgen ; npx playwright test --ui
     ```
-
+    
 6. `test --trace on` Ejecuta los test en modo trace, es decir registra toda la actividad (genera archivos pesados) similar al modo UI, pero ya con los test ejecutados. Luego de ejecutarse en modo trace, debe abrirse el reporte usando `npx playwright show-report` y buscar donde dice ***view trace***
     
     ```
@@ -288,6 +288,92 @@ Con fixture tambien se puede hacer que solo se ejecuten o que tengan logicas seg
     }
     await use(storageState);
   },
+});
+```
+## Timeouts
+Por defecto playwright establece que cada test debe durar hasta un maximo de 30 segundos, si uno se excede ese tiempo queda como fallido.
+Existen otros timeouts como
+-Action timeout por defecto en **0- sin timeout** -> para metodo relacionados con naveacion goto, reload, etc.
+-Navigation timeout por defecto en **0 - sin timeout**  -> Para acciones como click, fill, etc
+-Expect timeout por defect en **5 segundos** -> Par todos lo expect()
+
+Esto significa que por defecto playwright no establece timout para acciones individuales, exceptuando los expect.
+
+### Cambiando los timeouts por defecto
+
+#### Cambiando timeouts por linea individual
+Es posible establecer timeout a una linea de action, navigation o expect (sin embargo si el tiempo del tiemout por test sigue corriendo igual)
+```ts
+await expect(this.myElement).toBeVisible({ timeout: 10000 }); //Espera 10 segundos en vez de los 5
+await this.myButton.click({ timeout: 5000 }); //Se espera 5 segundos
+```
+
+#### Cambiando timeouts para todo le poryecto
+Dentro de `playwright.config.ts` es posible cambiar los valores de los timeouts de todo el proyecto y aplicaria para todos los test. ***En su documentacion, playwright, no recomienda cambiar los valores del action y navigation timeout a menos que se requiera***.
+```ts
+export default defineConfig({
+  timeout: 120_000, //30 default
+  expect: {
+    timeout: 10_000, //5 default
+  },
+  use: {
+    navigationTimeout: 30_000, //0 default
+    actionTimeout: 10_000, //0 default
+  },
+});
+```
+#### Cambiando timeout usando tags de bdd-playwright
+La libreria bdd-playwright tiene ciertos tags especiales entre ellos `@timeout:N` que permite establecer timeout para ese escenario, o si se establecer en el feature, para cada escenario de ese feature
+```
+@timeout:30000
+Scenario: Escenario Generico
+    Given Estoy en mi pagina logeado
+    When Navego por mi pagina
+    Then Visualizo mis datos
+
+```
+
+Tambien esta el tag `@slow` que permite aumetnar el timeout x3 para es escenario en especifico
+```
+@slow
+Scenario: Escenario Generico
+    Given Estoy en mi pagina logeado
+    When Navego por mi pagina
+    Then Visualizo mis datos
+
+```
+#### Cambiando timeout en fixtures y filtrar por tag
+Dentro de los fixtures es poible configurar fixture que se ejecutan siempre antes y despues de cada escenario (simiar), similar a los Hooks `BeforeScenario` y `AferScenario`. Dentro de este fixture pueden configurarse estos timeouts e incluso que solo apliquen a ciertos escenarios, filtrando, por ejemplo por tags, en el ejemplo solo aplicaremos estos tiemouts si el escenario tiene el tag `ultraslow`:
+```ts
+type Fixtures = {
+    forEachTest: void;
+};
+
+export const test = base.extend<Fixtures, WorkerFixtures>({
+    forEachTest: [
+        async ({ page, $testInfo, $tags }, use) => {
+            const isUltraSlow = $tags.includes('@ultraslow'); //true si escenario tiene el tag @ultraslow
+            if (isUltraSlow) { //Si tiene el tag @ultraslow se aplica estos tiemout
+                $testInfo.setTimeout(15 * 60 * 1000);  //Timeout test entero
+                page.setDefaultNavigationTimeout(10_000); //Timeout para acciones de navegación como goto, reload, etc.
+                page.setDefaultTimeout(10_000); //Timeout para accion y navegacion. Si setDefaultNavigationTimeout esta definodo, este timeout se aplicara solo a acciones que no sean de navegación (click, fill, etc.)
+            }
+            await use();
+        },
+        { scope:'test', auto: true }, //Se ejecuta antes de cada test
+    ], 
+    //(...)
+})
+```
+
+#### Cambiando timeout en hooks y filtrar por tag
+Dentro del Hooks `BeforeScenario` se puede configurar estos timeouts, y al igual que con fixture que solo apliquen a ciertos escenarios, filtrando, por ejemplo por tags, en el ejemplo solo aplicaremos estos tiemouts si el escenario tiene el tag `ultraslow`:
+```ts
+BeforeScenario({ tags: '@ultraslow' }, async ({ page, $testInfo, $tags }) => {
+  $testInfo.setTimeout(15 * 60 * 1000);
+  page.setDefaultTimeout(10_000);
+  page.setDefaultNavigationTimeout(10_000);
+
 });
 ```
 
