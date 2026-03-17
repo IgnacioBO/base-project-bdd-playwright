@@ -330,7 +330,6 @@ Scenario: Escenario Generico
     Given Estoy en mi pagina logeado
     When Navego por mi pagina
     Then Visualizo mis datos
-
 ```
 
 Tambien esta el tag `@slow` que permite aumetnar el timeout x3 para es escenario en especifico
@@ -340,10 +339,10 @@ Scenario: Escenario Generico
     Given Estoy en mi pagina logeado
     When Navego por mi pagina
     Then Visualizo mis datos
-
 ```
+
 #### Cambiando timeout en fixtures y filtrar por tag
-Dentro de los fixtures es poible configurar fixture que se ejecutan siempre antes y despues de cada escenario (simiar), similar a los Hooks `BeforeScenario` y `AferScenario`. Dentro de este fixture pueden configurarse estos timeouts e incluso que solo apliquen a ciertos escenarios, filtrando, por ejemplo por tags, en el ejemplo solo aplicaremos estos tiemouts si el escenario tiene el tag `ultraslow`:
+Dentro de los fixtures es posible configurar fixtures que se ejecutan siempre antes y despues de cada escenario, similar a los Hooks `BeforeScenario` y `AferScenario`. Dentro de este fixture pueden configurarse estos timeouts e incluso que solo apliquen a ciertos escenarios, filtrando, por ejemplo por tags, en el ejemplo solo aplicaremos estos tiemouts si el escenario tiene el tag `@ultraslow`:
 ```ts
 type Fixtures = {
     forEachTest: void;
@@ -367,18 +366,17 @@ export const test = base.extend<Fixtures, WorkerFixtures>({
 ```
 
 #### Cambiando timeout en hooks y filtrar por tag
-Dentro del Hooks `BeforeScenario` se puede configurar estos timeouts, y al igual que con fixture que solo apliquen a ciertos escenarios, filtrando, por ejemplo por tags, en el ejemplo solo aplicaremos estos tiemouts si el escenario tiene el tag `ultraslow`:
+Dentro del Hook `BeforeScenario` se puedem configurar estos timeouts, y al igual que con fixture que solo apliquen a ciertos escenarios, filtrando, por ejemplo por tags, en el ejemplo solo aplicaremos estos tiemouts si el escenario tiene el tag `@ultraslow`:
 ```ts
 BeforeScenario({ tags: '@ultraslow' }, async ({ page, $testInfo, $tags }) => {
-  $testInfo.setTimeout(15 * 60 * 1000);
-  page.setDefaultTimeout(10_000);
-  page.setDefaultNavigationTimeout(10_000);
-
+  $testInfo.setTimeout(15 * 60 * 1000); //Timeout test entero
+  page.setDefaultTimeout(10_000); //Timeout para acciones de navegación como goto, reload, etc.
+  page.setDefaultNavigationTimeout(10_000); //Timeout para accion y navegacion. Si setDefaultNavigationTimeout esta definodo, este timeout se aplicara solo a acciones que no sean de navegación (click, fill, etc.)
 });
 ```
 
 ## Usar logs
-Tan solo se debe import el archivo `config/logger` y usar las opcioens de logueo
+Tan solo se debe importar el archivo `config/logger` y usar las opciones de logueo
 ```ts
 import { log } from '../../config/logger';
 async testLog() {
@@ -438,4 +436,3 @@ async testLog() {
     ```ts
     cucumberReporter('html', {skipAttachments: ['text/x.cucumber.log+plain']}),
     ``` 
-
