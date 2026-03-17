@@ -32,6 +32,7 @@ Ademas las ventajas propias de cucumber:
     ```
 6. Revisar `.env.example` para poder crear los archivos `env.pais.ambiente.local`, como puede ser `env.cl.qa.local` con las **variables sensibles** como `USER` o `PASSWORD`[ver mas detalles](#env-example-y-env-local)
 7. Es importante siempre usar npx bddgen primero para genear los test basados en cucumber. Para ejecutar todos los casos
+
     Windows
     ```
     npx bddgen; npx playwright test
@@ -72,40 +73,49 @@ TEST_PASS=mi_pass
 ## Algunos comandos utiles
 1. Ejecutar segun pais, ambiente y browser (por defecto solo viene para Chrome, habilitar los demas en `playwright.config.ts`)
  - bash: 
+
     ```
     APP_ENV=qa COUNTRY=cl npx bddgen npx playwright test --project "chromium"
     ```
  - powershell: 
+    
     ```
     $env:APP_ENV="qa"; $env:COUNTRY="cl"; npx bddgen ; npx playwright test --project "chromium"
     ```
  - cmd windows: 
+    
     ```
     set "APP_ENV=qa" && set "COUNTRY=cl" && npx bddgen && npx playwright test --project "chromium"
     ```
 2. `HEADED="false"` por defecto se ejecutan de manera headed, si quiere ejecutarse headless poner la variable de entorno en false
 3. Ejecutar test especificos
  - `--tags "@tag"` Por tags  (el mas recomendado si se usa Cucumber), permite usar conectores logicos (and, or, not)
+    
     ```
     npx bddgen --tags "@POM or @POM2"  ; npx playwright test
     ```
  - `-g "parte del titulo"` Por parte del nombre del escenario, usando 
+    
      ```
     npx bddgen ; npx playwright test -g "Compra de productos2"
     ```
  - `--grep-invert "2"` Los escenarios que no tienen parte de un texto 
+    
     ```
     npx bddgen ; npx playwright test --grep-invert "2"
     ```
 4. `--repeat-each x` Donde x es un numero, permite repetir las pruebas x cantidad de veces
+    
     ```
     npx bddgen ; npx playwright test --repeat-each 2
     ```
 5. `test --ui` Ejecutar en modo UI, muy util para depurar y ejecutar cada test de manera aisalda y poder inpseccionar elementos, locators, logs internos, DOM, erroes, network, etc.
+    
     ```
     npx bddgen ; npx playwright test --ui
     ```
 6. `test --trace on` Ejecuta los test en modo trace, es decir registra toda la actividad (genera archivos pesados) similar al modo UI, pero ya con los test ejecutados. Luego de ejecutarse en modo trace, debe abrirse el reporte usando `npx playwright show-report` y buscar donde dice ***view trace***
+    
     ```
     npx bddgen ; npx playwright test --trace on
     npx playwright show-report reports\cucumber-report
